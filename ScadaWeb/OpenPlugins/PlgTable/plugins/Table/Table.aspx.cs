@@ -91,7 +91,7 @@ namespace Scada.Web.Plugins.Table
         private string GenerateTimeSelectHtml(string elemID, bool addPrevDay, int selectedHour)
         {
             StringBuilder sbHtml = new StringBuilder();
-            sbHtml.Append("<select id='").Append(elemID).AppendLine("'>");
+            sbHtml.Append("<select class='form-control' id='").Append(elemID).AppendLine("'>");
 
             if (addPrevDay)
                 AppendOptGroup(sbHtml, PlgPhrases.PreviousDay, -24, -1, selectedHour);
@@ -118,12 +118,28 @@ namespace Scada.Web.Plugins.Table
         }
 
         /// <summary>
+        /// Добавить ячейку в табличное представление
+        /// </summary>
+        private void AppendCellHead(StringBuilder sbHtml, string cssClass, string innerHtml, string hour = null)
+        {
+            sbHtml.Append("<th");
+
+            if (!string.IsNullOrEmpty(cssClass))
+                sbHtml.Append(" class='").Append(cssClass).Append("'");
+
+            if (hour != null)
+                sbHtml.Append(" data-hour='").Append(hour).Append("'");
+
+            sbHtml.Append(">").Append(innerHtml).Append("</th>");
+        }
+
+        /// <summary>
         /// Добавить текст подсказки в табличное представление
         /// </summary>
         private void AppendHint(StringBuilder sbHtml, bool addBreak, string label, int num, string name)
         {
             if (addBreak)
-                sbHtml.Append("<br />");
+                sbHtml.Append("\n");
             sbHtml.Append(label);
             if (num > 0)
                 sbHtml.Append("[").Append(num).Append("] ");
@@ -143,15 +159,15 @@ namespace Scada.Web.Plugins.Table
                 hourStrings[hourInd] = hour.ToString();
 
             StringBuilder sbHtml = new StringBuilder();
-            sbHtml.AppendLine("<table>");
+            sbHtml.AppendLine("<table class='table table-hover table-responsive table-bordered'>");
 
             // заголовок таблицы
             sbHtml.AppendLine("<tr class='hdr'>");
-            AppendCell(sbHtml, "cap", "<span>" + PlgPhrases.ItemCol + "</span>");
-            AppendCell(sbHtml, "cur", "<span>" + PlgPhrases.CurCol + "</span>");
+            AppendCellHead(sbHtml, "cap", "<span>" + PlgPhrases.ItemCol + "</span>");
+            AppendCellHead(sbHtml, "cur", "<span>" + PlgPhrases.CurCol + "</span>");
             for (int hour = FirstHour, hourInd = 0; hour <= LastHour; hour++, hourInd++)
             {
-                AppendCell(sbHtml, timeFrom <= hour && hour <= timeTo ? "hour" : "hour hidden", 
+                AppendCellHead(sbHtml, timeFrom <= hour && hour <= timeTo ? "hour" : "hour hidden", 
                     "<span>" + GetLocalizedHour(hour) + "</span>", hourStrings[hourInd]);
             }
             sbHtml.AppendLine().AppendLine("</tr>");
@@ -177,37 +193,40 @@ namespace Scada.Web.Plugins.Table
                 if (cnlNum > 0 || ctrlCnlNum > 0)
                 {
                     StringBuilder sbCapHtml = new StringBuilder();
+                    StringBuilder sbHint = new StringBuilder();
+
+                    // всплывающая подсказка
+                   // sbHint.Append("<span class='hint'>");
+                    if (cnlNum > 0)
+                        AppendHint(sbHint, false, PlgPhrases.InCnlHint, cnlNum,
+                            cnlProps == null ? "" : cnlProps.CnlName);
+                    if (ctrlCnlNum > 0)
+                        AppendHint(sbHint, cnlNum > 0, PlgPhrases.CtrlCnlHint, ctrlCnlNum,
+                          item.CtrlCnlProps == null ? "" : item.CtrlCnlProps.CtrlCnlName);
+                    if (cnlProps != null)
+                    {
+                        if (cnlProps.ObjNum > 0)
+                            AppendHint(sbHint, true, PlgPhrases.ObjectHint, cnlProps.ObjNum, cnlProps.ObjName);
+                        if (cnlProps.KPNum > 0)
+                            AppendHint(sbHint, true, PlgPhrases.DeviceHint, cnlProps.KPNum, cnlProps.KPName);
+                        if (cnlProps.ParamID > 0)
+                            AppendHint(sbHint, true, PlgPhrases.QuantityHint, 0, cnlProps.ParamName);
+                        if (cnlProps.UnitID > 0 && cnlProps.ShowNumber)
+                            AppendHint(sbHint, true, PlgPhrases.UnitHint, 0, cnlProps.UnitSign);
+                    }
+                    //sbHint.Append("</span>");
 
                     // иконка и обозначение
                     string iconFileName = cnlProps == null || cnlProps.IconFileName == "" ?
                         DefQuantityIcon : cnlProps.IconFileName;
                     sbCapHtml.Append("<img src='" + QuantityIconsPath + iconFileName + "' class='icon' alt='' />")
-                        .Append("<a href='' class='lbl'>").Append(caption).Append("</a>");
+                        .Append("<a href='' class='lbl' data-toggle='tooltip' data-placement='right' title='").Append(sbHint).Append("' >").Append(caption).Append("</a>");
 
                     // команда
                     if (ctrlCnlNum > 0 && cmdEnabled)
                         sbCapHtml.Append("<span class='cmd' title='Send Command'></span>");
 
-                    // всплывающая подсказка
-                    sbCapHtml.Append("<span class='hint'>");
-                    if (cnlNum > 0)
-                        AppendHint(sbCapHtml, false, PlgPhrases.InCnlHint, cnlNum, 
-                            cnlProps == null ? "" : cnlProps.CnlName);
-                    if (ctrlCnlNum > 0)
-                        AppendHint(sbCapHtml, cnlNum > 0, PlgPhrases.CtrlCnlHint, ctrlCnlNum,
-                          item.CtrlCnlProps == null ? "" : item.CtrlCnlProps.CtrlCnlName);
-                    if (cnlProps != null)
-                    {
-                        if (cnlProps.ObjNum > 0)
-                            AppendHint(sbCapHtml, true, PlgPhrases.ObjectHint, cnlProps.ObjNum, cnlProps.ObjName);
-                        if (cnlProps.KPNum > 0)
-                            AppendHint(sbCapHtml, true, PlgPhrases.DeviceHint, cnlProps.KPNum, cnlProps.KPName);
-                        if (cnlProps.ParamID > 0)
-                            AppendHint(sbCapHtml, true, PlgPhrases.QuantityHint, 0, cnlProps.ParamName);
-                        if (cnlProps.UnitID > 0 && cnlProps.ShowNumber)
-                            AppendHint(sbCapHtml, true, PlgPhrases.UnitHint, 0, cnlProps.UnitSign);
-                    }
-                    sbCapHtml.Append("</span>");
+                   
 
                     AppendCell(sbHtml, "cap", sbCapHtml.ToString());
                 }

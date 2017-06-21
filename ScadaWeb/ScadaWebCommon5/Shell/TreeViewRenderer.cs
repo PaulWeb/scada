@@ -84,7 +84,7 @@ namespace Scada.Web.Shell
         /// </summary>
         protected string GenTreeViewHtml(IList treeNodes, object selObj, Options options, bool topLevel)
         {
-            const string NodeTemplate =
+            /*const string NodeTemplate =
                 "<a class='node{0}' href='{1}' {2}>" +
                 "<div class='node-items'>" +
                 "<div class='indent'></div>" +
@@ -93,25 +93,37 @@ namespace Scada.Web.Shell
                 "<div class='icon'>{4}</div>" +
                 "<div class='text'>{5}</div>" +
                 "<div class='expander right{3}'></div>" +
-                "</div></a>";
+                "</div></a>";*/
+            const string NodeTemplate = "<a href='{0}' ><i>{1}</i> {2} {3}</a>";
             const string IconTemplate = "<img src='{0}' alt='' />";
 
             StringBuilder sbHtml = new StringBuilder();
-            sbHtml.AppendLine(topLevel ? 
-                "<div class='tree-view'>" : 
-                "<div class='child-nodes'>");
+            
 
             if (treeNodes != null)
             {
                 foreach (object treeNode in treeNodes)
                 {
+                    
                     IWebTreeNode webTreeNode = treeNode as IWebTreeNode;
                     if (webTreeNode != null)
                     {
                         bool containsSubitems = webTreeNode.Children.Count > 0;
                         bool urlIsEmpty = string.IsNullOrEmpty(webTreeNode.Url);
-                        string nodeCssClass = (webTreeNode.IsSelected(selObj) ? " selected" : "") + 
-                            (!containsSubitems && urlIsEmpty ? " disabled" : "");
+                        string nodeCssClass = (webTreeNode.IsSelected(selObj) ? "active" : "") +
+                           (!containsSubitems && urlIsEmpty ? " disabled" : "");
+                        string childs = "";
+                        if (containsSubitems) {
+                            childs = GenTreeViewHtml(webTreeNode.Children, selObj, options, false);
+
+                            if (childs.Contains("active"))
+                            {
+                                nodeCssClass = "active";
+                            }
+                        }
+                        sbHtml.AppendLine("<li class='").Append(nodeCssClass).Append("' >");
+                       
+                       
                         string dataAttrs = GenDataAttrsHtml(webTreeNode);
                         string expanderCssClass = containsSubitems ? "" : " empty";
 
@@ -128,16 +140,28 @@ namespace Scada.Web.Shell
                             icon = "";
                         }
 
+                        /*sbHtml.AppendLine(string.Format(NodeTemplate,
+                            nodeCssClass, webTreeNode.Url, dataAttrs, expanderCssClass, icon, HttpUtility.HtmlEncode(webTreeNode.Text)));*/
+
                         sbHtml.AppendLine(string.Format(NodeTemplate,
-                            nodeCssClass, webTreeNode.Url, dataAttrs, expanderCssClass, icon, HttpUtility.HtmlEncode(webTreeNode.Text)));
+                            webTreeNode.Url, icon, HttpUtility.HtmlEncode(webTreeNode.Text), containsSubitems?
+                            "<span class='pull-right-container'><i class='fa fa-angle-left pull-right'></i></span>"
+                            :""));
 
                         if (containsSubitems)
-                            sbHtml.Append(GenTreeViewHtml(webTreeNode.Children, selObj, options, false));
+                        {
+                            sbHtml.AppendLine("<ul class='treeview-menu'>");
+                           
+                            sbHtml.Append(childs);
+                            sbHtml.AppendLine("</ul>");
+                        }
+                        sbHtml.AppendLine("</li>");
                     }
+                   
                 }
             }
 
-            sbHtml.AppendLine("</div>");
+            
             return sbHtml.ToString();
         }
 
